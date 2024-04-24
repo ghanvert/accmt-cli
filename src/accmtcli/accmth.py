@@ -1,7 +1,9 @@
+#!/usr/bin/env python
+
 from argparse import ArgumentParser
 
 def show_strategies():
-    from utils import configs
+    from .utils import configs
 
     for strat in configs.keys():
         print(f"\t{strat}")
@@ -17,7 +19,7 @@ def generate_hps():
 
     exit(1)
 
-if __name__ == "__main__":
+def main():
     parser = ArgumentParser(description="ACCMT Helper CLI.")
     parser.add_argument(
         "--strategies",
@@ -42,3 +44,6 @@ if __name__ == "__main__":
         generate_hps()
     else:
         print("ERROR: You must provide one argument ('--strategies' or '--hps').")
+
+if __name__ == "__main__":
+    main()

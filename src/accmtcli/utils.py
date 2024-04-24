@@ -3,7 +3,7 @@ import os
 
 configs = {}
 _directory = os.path.dirname(__file__)
-for file in os.listdir("config"):
+for file in os.listdir(f"{_directory}/config"):
     key = file.split(".")[0]
     configs[key] = f"{_directory}/config/{file}"
 

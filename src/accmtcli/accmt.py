@@ -1,7 +1,9 @@
+#!/usr/bin/env python
+
 import os
 
 from argparse import ArgumentParser, REMAINDER
-from utils import configs, modify_config_file, get_free_gpus
+from .utils import configs, modify_config_file, get_free_gpus
 
 def main():
     import torch
