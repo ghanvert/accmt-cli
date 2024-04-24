@@ -22,22 +22,11 @@ def main():
         help="Number or GPU indices to use (e.g. -n=0,1,4,5 | -n=all | -n=available)."
     )
     parser.add_argument(
-        "--ddp",
-        action="store_true",
+        "--strat",
+        type=str,
         required=False,
-        help="Applies standard Distributed Data Parallel (DDP) strategy."
-    )
-    parser.add_argument(
-        "--fsdp",
-        action="store_true",
-        required=False,
-        help="Applies standard Fully Sharded Data Parallel (FSDP) strategy."
-    )
-    parser.add_argument(
-        "--deepspeed",
-        "--ds",
-        required=False,
-        help="Applies standard DeepSpeed strategy."
+        default="ddp",
+        help="Parallelism strategy to apply. See 'accmth --strategies'."
     )
     parser.add_argument(
         "file",
@@ -52,23 +41,11 @@ def main():
 
     args = parser.parse_args()
     gpus = args.gpus.lower()
-    ddp = args.ddp
-    fsdp = args.fsdp
-    deepspeed = args.deepspeed
+    strat = args.strat
     file = args.file
     extra_args = " ".join(args.extra_args)
 
-    accelerate_config_file = None
-    if all([ddp, fsdp, deepspeed]):
-        raise RuntimeError("Cannot execute multiple strategies. Please, choose only one.")
-    elif ddp:
-        accelerate_config_file = configs["ddp"]
-    elif fsdp:
-        accelerate_config_file = configs["fsdp"]
-    elif deepspeed:
-        accelerate_config_file = configs["deepspeed"]
-    else:
-        accelerate_config_file = configs["ddp"]
+    accelerate_config_file = configs[strat]
 
     gpu_indices = ""
     if gpus == "available":

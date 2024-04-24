@@ -1,13 +1,15 @@
-import torch
 import yaml
+import os
 
-configs = {
-    "ddp": "config/ddp.yaml",
-    "fsdp": "config/fsdp.yaml",
-    "deepspeed": "config/deepspeed.yaml"
-}
+configs = {}
+_directory = os.path.dirname(__file__)
+for file in os.listdir("config"):
+    key = file.split(".")[0]
+    configs[key] = f"{_directory}/config/{file}"
 
 def get_free_gpus(num_devices: int) -> list[str]:
+    import torch
+
     GB = 1024**3
 
     devices = []
