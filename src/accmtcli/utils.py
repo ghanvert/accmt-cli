@@ -1,5 +1,6 @@
 import yaml
 import os
+import socket
 
 configs = {}
 _directory = os.path.dirname(__file__)
@@ -33,11 +34,39 @@ def get_free_gpus(num_devices: int) -> list[str]:
 
     return devices
 
+def check_port_available(port: int, host="127.0.0.1"):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(1)
+        result = sock.connect_ex((host, port))
+        return result != 0
 
-def modify_config_file(path: str, num_gpus: int):
-    with open(path, "r") as f:
-        data = yaml.safe_load(f)
+def modify_config_file(path: str, num_gpus: int, port: int = 29500):
+    data = yaml.safe_load(open(path))
 
+    _port = port
+    port = port if check_port_available(port) else 0
+    if port == 0:
+        for current_port in range(_port+1, 65536):
+            if check_port_available(current_port):
+                port = current_port
+                break
+        
+        if port == 0: # if 29500 to 65535 is not available
+            for current_port in range(1, _port):
+                if check_port_available(current_port):
+                    port = current_port
+                    break
+
+        if port == 0:
+            raise RuntimeError("There are no ports available in your system.")
+    
+    prev_main_process_port = data["main_process_port"] if "main_process_port" in data else -1
+    prev_num_processes = data["num_processes"]
+
+    if prev_main_process_port == port and prev_num_processes == num_gpus:
+        return # skip write process
+
+    data["main_process_port"] = port
     data["num_processes"] = num_gpus
 
     with open(path, "w") as f:
