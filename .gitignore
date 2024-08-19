@@ -1,5 +1,5 @@
-accmt.egg-info/
+accmt_cli.egg-info/
 dist/
-__pycache__
+__pycache__/
 .env
 upload.py
