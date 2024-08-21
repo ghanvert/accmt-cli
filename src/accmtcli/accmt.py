@@ -28,7 +28,7 @@ def main():
         type=str,
         required=False,
         default="ddp",
-        help="Parallelism strategy to apply. See 'accmth --strategies'."
+        help="Parallelism strategy to apply or config file path. See 'accmth --strategies'."
     )
     parser.add_argument(
         "file",
@@ -46,7 +46,10 @@ def main():
     file = args.file
     extra_args = " ".join(args.extra_args)
 
-    accelerate_config_file = configs[strat]
+    if "." in strat:
+        accelerate_config_file = strat
+    else:
+        accelerate_config_file = configs[strat]
 
     import torch
     if not torch.cuda.is_available():
