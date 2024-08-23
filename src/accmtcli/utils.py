@@ -71,3 +71,16 @@ def modify_config_file(path: str, num_gpus: int, port: int = 29500):
 
     with open(path, "w") as f:
         yaml.safe_dump(data, f)
+
+def get_python_cmd():
+    if os.cmd("python") == 0:
+        return "python"
+    else:
+        return "python3"
+
+def remove_compiled_prefix(state_dict):
+    compiled = "_orig_mod" in list(state_dict.keys())[0]
+    if not compiled: return state_dict
+
+    t = type(state_dict)
+    return t({k.removeprefix("_orig_mod."):v for k, v in state_dict.items()})
