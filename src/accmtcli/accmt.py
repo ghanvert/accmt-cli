@@ -3,32 +3,10 @@ import os
 import shutil
 from argparse import ArgumentParser, REMAINDER
 from collections import OrderedDict
-from .utils import configs, modify_config_file, get_free_gpus, get_python_cmd, remove_compiled_prefix
+from utils import configs, modify_config_file, get_free_gpus, get_python_cmd, remove_compiled_prefix
 
 def main():
     parser = ArgumentParser(description="AcceleratorModule CLI to run train processes on top of 🤗 Accelerate.")
-
-    # Get model from checkpoint
-    parser.add_argument(
-        "--get",
-        type=str,
-        required=False,
-        help="Get model from checkpoint."
-    )
-    parser.add_argument(
-        "--dtype",
-        type=str,
-        required=False,
-        help=("Data type of model parameters. Available options are all "
-              "those from PyTorch ('float32', 'float16', etc).")
-    )
-    parser.add_argument(
-        "--out",
-        type=str,
-        required=False,
-        help="Out directory name."
-    )
-
     # Run distributed training
     parser.add_argument(
         "--gpus",
@@ -63,11 +41,22 @@ def main():
         "extra_args",
         nargs=REMAINDER
     )
+
+    subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
+    
+    get_parser = subparsers.add_parser("get", help="Get model from a checkpoint directory.")
+    get_parser.add_argument("checkpoint", type=str, help="Checkpoint directory.")
+    get_parser.add_argument("--out", "-O", "-o", required=True, type=str, help="Output directory path name.")
+    get_parser.add_argument("--dtype", type=str, default="float32", help=(
+        "Data type of model parameters. Available options are all "
+        "those from PyTorch ('float32', 'float16', etc)."
+    ))
+
     args = parser.parse_args()
 
     import torch
 
-    if args.get is None:
+    if args.command is None:
         gpus = args.gpus.lower()
         strat = args.strat
         file = args.file
@@ -110,17 +99,17 @@ def main():
                 f"{file} {extra_args}")
         
         os.system(cmd)
-    else:
-        assert args.out is not None, "You must specify '--out', the out directory name."
+    elif args.command == "get":
+        assert args.out is not None, "You must specify an output directory ('--out')."
         assert hasattr(torch, args.dtype), f"'{args.dtype}' not supported in PyTorch."
-        CHKPT_BASE_DIRECTORY = f"{args.get}/checkpoint"
+        CHKPT_BASE_DIRECTORY = f"{args.checkpoint}/checkpoint"
         checkpoint_dir = CHKPT_BASE_DIRECTORY if os.path.exists(CHKPT_BASE_DIRECTORY) else args.get
         files = os.listdir(checkpoint_dir)
 
         python_cmd = get_python_cmd()
         os.makedirs(args.out, exist_ok=True)
-        if "status.json" in os.listdir(args.get):
-            shutil.copy(f"{args.get}/status.json", args.out)
+        if "status.json" in os.listdir(args.checkpoint):
+            shutil.copy(f"{args.checkpoint}/status.json", args.out)
         
         state_dict_file = f"{args.out}/pytorch_model.pt"
 
