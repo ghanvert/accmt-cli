@@ -2,13 +2,15 @@
 import os
 import shutil
 from argparse import ArgumentParser, REMAINDER
-from collections import OrderedDict
-from utils import configs, modify_config_file, get_free_gpus, get_python_cmd, remove_compiled_prefix
+from .utils import configs, modify_config_file, get_free_gpus, get_python_cmd, remove_compiled_prefix, generate_hps, show_strategies
 
 def main():
     parser = ArgumentParser(description="AcceleratorModule CLI to run train processes on top of 🤗 Accelerate.")
+    subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
+
     # Run distributed training
-    parser.add_argument(
+    launch_parser = subparsers.add_parser("launch", help="Launch distributed training processes.")
+    launch_parser.add_argument(
         "--gpus",
         "-n",
         default="all",
@@ -16,7 +18,7 @@ def main():
         required=False,
         help="Number or GPU indices to use (e.g. -n=0,1,4,5 | -n=all | -n=available)."
     )
-    parser.add_argument(
+    launch_parser.add_argument(
         "-N",
         default="0",
         type=str,
@@ -25,25 +27,18 @@ def main():
              "a Python slice. (e.g. '2:', which means from index 2 to the last GPU index, or "
              "'3:8', which means from index 3 to index 7, or lastly ':4', which means indices 0 to 3 or a total of 4 gpus)."
     )
-    parser.add_argument(
+    launch_parser.add_argument(
         "--strat",
         type=str,
         required=False,
         default="ddp",
-        help="Parallelism strategy to apply or config file path. See 'accmth --strategies'."
+        help="Parallelism strategy to apply or config file path. See 'accmt strats'."
     )
-    parser.add_argument(
-        "file",
-        type=str,
-        help="File to run training."
-    )
-    parser.add_argument(
-        "extra_args",
-        nargs=REMAINDER
-    )
-
-    subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
+    launch_parser.add_argument("-O1", action="store_true", help="Apply optimization type 1: efficient OMP_NUM_THREADS.")
+    launch_parser.add_argument("file", type=str, help="File to run training.")
+    launch_parser.add_argument("extra_args", nargs=REMAINDER)
     
+    # Get model from checkpoint
     get_parser = subparsers.add_parser("get", help="Get model from a checkpoint directory.")
     get_parser.add_argument("checkpoint", type=str, help="Checkpoint directory.")
     get_parser.add_argument("--out", "-O", "-o", required=True, type=str, help="Output directory path name.")
@@ -52,11 +47,24 @@ def main():
         "those from PyTorch ('float32', 'float16', etc)."
     ))
 
+    # Strats
+    strats_parser = subparsers.add_parser("strats", help="Available strategies.")
+    strats_parser.add_argument("--ddp", action="store_true", help="Only show DistributedDataParallel (DDP) strategies.")
+    strats_parser.add_argument("--fsdp", action="store_true", help="Only show FullyShardedDataParallel (FSDP) strategies.")
+    strats_parser.add_argument("--deepspeed", action="store_true", help="Only show DeepSpeed strategies.")
+
+    # Generate example
+    example_parser = subparsers.add_parser("example", help="Generate example file.")
+
     args = parser.parse_args()
+
+    if args.command is None:
+        parser.print_help()
+        exit(0)
 
     import torch
 
-    if args.command is None:
+    if args.command == "launch":
         gpus = args.gpus.lower()
         strat = args.strat
         file = args.file
@@ -92,9 +100,12 @@ def main():
                 gpu_indices = ",".join(str(i) for i in range(int(args.N)))
 
         num_processes = len(gpu_indices.split(","))
+        print(num_processes)
         modify_config_file(accelerate_config_file, num_processes)
         
-        cmd = (f"CUDA_VISIBLE_DEVICES={gpu_indices} "
+        optimization1 = f"OMP_NUM_THREADS={os.cpu_count() // num_processes}" if args.O1 else ""
+
+        cmd = (f"{optimization1} CUDA_VISIBLE_DEVICES={gpu_indices} "
                 f"accelerate launch --config_file={accelerate_config_file} "
                 f"{file} {extra_args}")
         
@@ -140,6 +151,18 @@ def main():
 
         torch.save(state_dict, state_dict_file)
         print(f"Model directory saved to '{args.out}'.")
+    elif args.command == "strats":
+        if args.ddp:
+            show_strategies(filter="ddp")
+        elif args.fsdp:
+            show_strategies(filter="fsdp")
+        elif args.deepspeed:
+            show_strategies(filter="deepspeed")
+        else:
+            show_strategies()
+    elif args.command == "example":
+        generate_hps()
+        print("'hps_example.yaml' generated.")
 
 if __name__ == "__main__":
     main()

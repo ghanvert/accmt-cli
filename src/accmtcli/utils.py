@@ -1,6 +1,7 @@
 import yaml
 import os
 import socket
+import shutil
 
 configs = {}
 _directory = os.path.dirname(__file__)
@@ -73,7 +74,7 @@ def modify_config_file(path: str, num_gpus: int, port: int = 29500):
         yaml.safe_dump(data, f)
 
 def get_python_cmd():
-    if os.cmd("python") == 0:
+    if shutil.which("python") is not None:
         return "python"
     else:
         return "python3"
@@ -84,3 +85,15 @@ def remove_compiled_prefix(state_dict):
 
     t = type(state_dict)
     return t({k.removeprefix("_orig_mod."):v for k, v in state_dict.items()})
+
+def show_strategies(filter: str = None):
+    if filter is None: filter = ""
+    for strat in configs.keys():
+        if filter in strat:
+            print(f"\t{strat}")
+
+    exit(1)
+
+def generate_hps():
+    directory = os.path.dirname(__file__)
+    shutil.copy(f"{directory}/example/hps_example.yaml", ".")
