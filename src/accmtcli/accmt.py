@@ -100,7 +100,6 @@ def main():
                 gpu_indices = ",".join(str(i) for i in range(int(args.N)))
 
         num_processes = len(gpu_indices.split(","))
-        print(num_processes)
         modify_config_file(accelerate_config_file, num_processes)
         
         optimization1 = f"OMP_NUM_THREADS={os.cpu_count() // num_processes}" if args.O1 else ""
