@@ -146,7 +146,7 @@ def main():
         for key in state_dict.keys():
             state_dict[key].requires_grad = False
             if args.dtype is not None:
-                state_dict[key] = state_dict[key].to(args.dtype)
+                state_dict[key] = state_dict[key].to(getattr(torch, args.dtype))
 
         torch.save(state_dict, state_dict_file)
         print(f"Model directory saved to '{args.out}'.")
