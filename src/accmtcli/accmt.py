@@ -134,9 +134,9 @@ def main():
             if exit_code != 0:
                 raise RuntimeError("Something went wrong when merging weights from FSDP.")
             
-            shutil.move(f"{checkpoint_dir}/pytorch_model.bin", f"{args.out}/pytorch_model.pt")
+            shutil.copy(f"{checkpoint_dir}/pytorch_model.bin", f"{args.out}/pytorch_model.pt")
         else: # check for DDP
-            shutil.move(f"{checkpoint_dir}/pytorch_model.bin", f"{args.out}/pytorch_model.pt")
+            shutil.copy(f"{checkpoint_dir}/pytorch_model.bin", f"{args.out}/pytorch_model.pt")
             
         state_dict = torch.load(state_dict_file, map_location="cpu", weights_only=True)
         state_dict = remove_compiled_prefix(state_dict)
