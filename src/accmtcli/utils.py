@@ -16,9 +16,7 @@ def get_free_gpus(num_devices: int) -> list[str]:
 
     devices = []
     for i in range(num_devices):
-        mem_alloc = torch.cuda.memory_allocated(i)
-        mem_resvd = torch.cuda.memory_reserved(i)
-        mem_total = mem_alloc + mem_resvd
+        mem_total, mem_alloc, mem_resvd = get_cuda_device_memory(i)
         if mem_total > 0:
             device_name = torch.cuda.get_device_name(i)
             print("------------------------------------------------")
@@ -97,3 +95,16 @@ def show_strategies(filter: str = None):
 def generate_hps():
     directory = os.path.dirname(__file__)
     shutil.copy(f"{directory}/example/hps_example.yaml", ".")
+
+def get_cuda_device_memory(device: int | str) -> tuple[float, float, float]:
+    import torch
+    device = f"cuda:{device}" if isinstance(device, int) else device
+
+    mem_alloc = torch.cuda.memory_allocated(device)
+    mem_resvd = torch.cuda.memory_reserved(device)
+    mem_total = mem_alloc + mem_resvd
+
+    return mem_total, mem_alloc, mem_resvd
+
+def cuda_device_in_use(device: int | str):
+    return get_cuda_device_memory(device) > 0

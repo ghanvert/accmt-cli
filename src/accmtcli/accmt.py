@@ -2,7 +2,7 @@
 import os
 import shutil
 from argparse import ArgumentParser, REMAINDER
-from .utils import configs, modify_config_file, get_free_gpus, get_python_cmd, remove_compiled_prefix, generate_hps, show_strategies
+from .utils import configs, modify_config_file, get_free_gpus, get_python_cmd, remove_compiled_prefix, generate_hps, show_strategies, cuda_device_in_use
 
 def main():
     parser = ArgumentParser(description="AcceleratorModule CLI to run train processes on top of 🤗 Accelerate.")
@@ -35,6 +35,7 @@ def main():
         help="Parallelism strategy to apply or config file path. See 'accmt strats'."
     )
     launch_parser.add_argument("-O1", action="store_true", help="Apply optimization type 1: efficient OMP_NUM_THREADS.")
+    launch_parser.add_argument("--ignore-warnings", action="store_true", help="Ignore warnings (launch independent if GPUs are being used).")
     launch_parser.add_argument("file", type=str, help="File to run training.")
     launch_parser.add_argument("extra_args", nargs=REMAINDER)
     
@@ -99,6 +100,19 @@ def main():
             else:
                 gpu_indices = ",".join(str(i) for i in range(int(args.N)))
 
+        if not args.ignore_warnings:
+            gpu_indices_list = [int(idx) for idx in gpu_indices.split(",")]
+            device_indices_in_use = []
+            for idx in gpu_indices_list:
+                if cuda_device_in_use(idx):
+                    device_indices_in_use.append(idx)
+
+            if len(device_indices_in_use) > 0:
+                raise RuntimeError(
+                    f"The following CUDA devices are in use: {device_indices_in_use}."
+                     "You can ignore this warning via '--ignore-warnings'."
+                )
+        
         num_processes = len(gpu_indices.split(","))
         modify_config_file(accelerate_config_file, num_processes)
         
