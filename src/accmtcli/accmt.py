@@ -1,63 +1,11 @@
 #!/usr/bin/env python
 import os
 import shutil
-from argparse import ArgumentParser, REMAINDER
 from .utils import configs, modify_config_file, get_free_gpus, get_python_cmd, remove_compiled_prefix, generate_hps, show_strategies, cuda_device_in_use
+from .parser import get_parser
 
 def main():
-    parser = ArgumentParser(description="AcceleratorModule CLI to run train processes on top of 🤗 Accelerate.")
-    subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
-
-    # Run distributed training
-    launch_parser = subparsers.add_parser("launch", help="Launch distributed training processes.")
-    launch_parser.add_argument(
-        "--gpus",
-        "-n",
-        default="all",
-        type=str,
-        required=False,
-        help="Number or GPU indices to use (e.g. -n=0,1,4,5 | -n=all | -n=available)."
-    )
-    launch_parser.add_argument(
-        "-N",
-        default="0",
-        type=str,
-        required=False,
-        help="Number of GPUs to use. This does not consider GPU indices by default, although you can represent "
-             "a Python slice. (e.g. '2:', which means from index 2 to the last GPU index, or "
-             "'3:8', which means from index 3 to index 7, or lastly ':4', which means indices 0 to 3 or a total of 4 gpus)."
-    )
-    launch_parser.add_argument(
-        "--strat",
-        type=str,
-        required=False,
-        default="ddp",
-        help="Parallelism strategy to apply or config file path. See 'accmt strats'."
-    )
-    launch_parser.add_argument("-O1", action="store_true", help="Apply optimization type 1: efficient OMP_NUM_THREADS.")
-    launch_parser.add_argument("--ignore-warnings", action="store_true", help="Ignore warnings (launch independent if GPUs are being used).")
-    launch_parser.add_argument("file", type=str, help="File to run training.")
-    launch_parser.add_argument("extra_args", nargs=REMAINDER)
-    
-    # Get model from checkpoint
-    get_parser = subparsers.add_parser("get", help="Get model from a checkpoint directory.")
-    get_parser.add_argument("checkpoint", type=str, help="Checkpoint directory.")
-    get_parser.add_argument("--out", "-O", "-o", required=True, type=str, help="Output directory path name.")
-    get_parser.add_argument("--dtype", type=str, default="float32", help=(
-        "Data type of model parameters. Available options are all "
-        "those from PyTorch ('float32', 'float16', etc)."
-    ))
-
-    # Strats
-    strats_parser = subparsers.add_parser("strats", help="Available strategies.")
-    strats_parser.add_argument("--ddp", action="store_true", help="Only show DistributedDataParallel (DDP) strategies.")
-    strats_parser.add_argument("--fsdp", action="store_true", help="Only show FullyShardedDataParallel (FSDP) strategies.")
-    strats_parser.add_argument("--deepspeed", action="store_true", help="Only show DeepSpeed strategies.")
-
-    # Generate example
-    example_parser = subparsers.add_parser("example", help="Generate example file.")
-
-    args = parser.parse_args()
+    parser, args = get_parser()
 
     if args.command is None:
         parser.print_help()
@@ -65,7 +13,10 @@ def main():
 
     import torch
 
-    if args.command == "launch":
+    if args.command in ["launch", "debug"]:
+        if args.command == "debug":
+            os.environ["ACCMT_DEBUG_MODE"] = args.level
+
         gpus = args.gpus.lower()
         strat = args.strat
         file = args.file

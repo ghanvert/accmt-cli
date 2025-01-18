@@ -50,3 +50,25 @@ accmt example
 ```
 
 This will generate a file on your current directory called 'hps_example.yaml'.
+
+## Debug
+Enable debug mode with:
+```bash
+accmt debug [--level] ...
+```
+
+Where `--level` flag is an integer number, which indicates the level of debugging. Available levels are:
+**LEVEL 1**:
+- Disables logging (MLFlow, Tensorboard, etc).
+
+**LEVEL 2**:
+- Disables model and teacher compilation.
+
+**LEVEL 3**:
+- Disables model saving, checkpointing and resuming (no folders will be created).
+
+**LEVEL 4** (default):
+- Force `eval_when_start` (in Trainer) to False.
+
+**LEVEL 5**:
+- Disables any evaluation.
