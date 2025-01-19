@@ -1,7 +1,17 @@
 #!/usr/bin/env python
 import os
 import shutil
-from .utils import configs, modify_config_file, get_free_gpus, get_python_cmd, remove_compiled_prefix, generate_hps, show_strategies, cuda_device_in_use
+from .utils import (
+    configs,
+    modify_config_file,
+    get_free_gpus,
+    get_python_cmd,
+    remove_compiled_prefix,
+    generate_hps,
+    show_strategies,
+    cuda_device_in_use,
+    DEBUG_LEVEL_INFO
+)
 from .parser import get_parser
 
 def main():
@@ -15,7 +25,7 @@ def main():
 
     if args.command in ["launch", "debug"]:
         if args.command == "debug":
-            os.environ["ACCMT_DEBUG_MODE"] = args.level
+            os.environ["ACCMT_DEBUG_MODE"] = str(args.level)
 
         gpus = args.gpus.lower()
         strat = args.strat
@@ -127,6 +137,15 @@ def main():
     elif args.command == "example":
         generate_hps()
         print("'hps_example.yaml' generated.")
+    elif args.command == "debug-levels":
+        if args.level is None:
+            for level, info in DEBUG_LEVEL_INFO.items():
+                print(f"  Level {level}: {info}")
+        else:
+            if args.level in DEBUG_LEVEL_INFO:
+                print(f"  Level {args.level}: {DEBUG_LEVEL_INFO[args.level]}")
+            else:
+                print(f"Level {args.level} is not valid. Debug mode levels are: {list(DEBUG_LEVEL_INFO.keys())}")
 
 if __name__ == "__main__":
     main()

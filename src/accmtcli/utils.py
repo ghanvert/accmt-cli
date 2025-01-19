@@ -107,4 +107,13 @@ def get_cuda_device_memory(device: int | str) -> tuple[float, float, float]:
     return mem_total, mem_alloc, mem_resvd
 
 def cuda_device_in_use(device: int | str):
-    return get_cuda_device_memory(device) > 0
+    mem_total, _, _ = get_cuda_device_memory(device)
+    return mem_total > 0
+
+DEBUG_LEVEL_INFO = {
+    1: "Disables logging (MLFlow, Tensorboard, etc).",
+    2: "Disables model and teacher compilation.",
+    3: "Disables model saving, checkpointing and resuming (no folders will be created).",
+    4: "Force 'eval_when_start' (in Trainer) to False.",
+    5: "Disables any evaluation."
+}
