@@ -27,7 +27,10 @@ def add_launch_arguments(parser: ArgumentParser):
         help="Parallelism strategy to apply or config file path. See 'accmt strats'."
     )
     parser.add_argument("-O1", action="store_true", help="Apply optimization type 1: efficient OMP_NUM_THREADS.")
-    parser.add_argument("--ignore-warnings", action="store_true", help="Ignore warnings (launch independent if GPUs are being used).")
+
+    # TODO: For now, we need to find a way to collect processes that are running on certain GPUs to verify if they're free to use.
+    #parser.add_argument("--ignore-warnings", action="store_true", help="Ignore warnings (launch independent if GPUs are being used).")
+
     parser.add_argument("file", type=str, help="File to run training.")
     parser.add_argument("extra_args", nargs=REMAINDER)
 
