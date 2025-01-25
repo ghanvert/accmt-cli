@@ -1,6 +1,5 @@
 import os
 import torch
-from typing import Optional
 from .utils import get_free_gpus, configs, modify_config_file
 
 def launch(args):
