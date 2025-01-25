@@ -110,6 +110,13 @@ def cuda_device_in_use(device: int | str):
     mem_total, _, _ = get_cuda_device_memory(device)
     return mem_total > 0
 
+def remove_first_line_in_file(file: str):
+    with open(file, "r+") as f:
+        lines = f.readlines()
+        f.seek(0)
+        f.writelines(lines[1:])
+        f.truncate()
+
 DEBUG_LEVEL_INFO = {
     1: "Disables logging (MLFlow, Tensorboard, etc).",
     2: "Disables model and teacher compilation.",
