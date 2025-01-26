@@ -22,15 +22,18 @@ def main():
     import torch
 
     if args.command in ["launch", "debug"]:
-        if not os.path.exists(".accmt"):
-            open(".accmt", "w").close()  # creates an emtpy file
-        
-        launch(args)
-        if os.path.exists(".accmt"):
-            cmds = open(".accmt").read().splitlines()
-            if len(cmds) > 0:
-                remove_first_line_in_file(".accmt")
-                os.system(cmds[0])
+        if not args.suppress_queue:
+            if not os.path.exists(args.queue_file):
+                open(args.queue_file, "w").close()  # creates an emtpy file
+            
+            launch(args)
+            if os.path.exists(args.queue_file):
+                cmds = open(args.queue_file).read().splitlines()
+                if len(cmds) > 0:
+                    remove_first_line_in_file(args.queue_file)
+                    os.system(cmds[0])
+        else:
+            launch(args)
     elif args.command == "get":
         assert args.out is not None, "You must specify an output directory ('--out')."
         assert hasattr(torch, args.dtype), f"'{args.dtype}' not supported in PyTorch."
