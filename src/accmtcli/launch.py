@@ -21,10 +21,10 @@ def launch(args):
     else:
         accelerate_config_file = configs[strat]
 
-    if not torch.cuda.is_available():
-        raise ImportError("Could not run CLI: CUDA is not available on your PyTorch installation.")
-
     if not cpu:
+        if not torch.cuda.is_available():
+            raise ImportError("Could not run CLI: CUDA is not available on your PyTorch installation.")
+        
         NUM_DEVICES = torch.cuda.device_count()
 
         gpu_indices = ""
