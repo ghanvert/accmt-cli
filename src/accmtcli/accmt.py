@@ -21,7 +21,7 @@ def main():
 
     import torch
 
-    if args.command in ["launch", "debug"]:
+    if "debug" in args.command or "launch" in args.command:
         if not args.suppress_queue:
             if not os.path.exists(args.queue_file):
                 open(args.queue_file, "w").close()  # creates an emtpy file

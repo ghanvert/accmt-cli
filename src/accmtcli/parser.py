@@ -1,24 +1,25 @@
 from argparse import ArgumentParser, REMAINDER, Namespace
 
 
-def add_launch_arguments(parser: ArgumentParser):
+def add_launch_arguments(parser: ArgumentParser, _async: bool = False):
     parser.add_argument(
         "--gpus",
         "-n",
         default="all",
         type=str,
-        required=False,
+        required=_async,
         help="Number or GPU indices to use (e.g. -n=0,1,4,5 | -n=all | -n=available)."
     )
-    parser.add_argument(
-        "-N",
-        default="0",
-        type=str,
-        required=False,
-        help="Number of GPUs to use. This does not consider GPU indices by default, although you can represent "
-                "a Python slice. (e.g. '2:', which means from index 2 to the last GPU index, or "
-                "'3:8', which means from index 3 to index 7, or lastly ':4', which means indices 0 to 3 or a total of 4 gpus)."
-    )
+    if not _async:
+        parser.add_argument(
+            "-N",
+            default="0",
+            type=str,
+            required=False,
+            help="Number of GPUs to use. This does not consider GPU indices by default, although you can represent "
+                    "a Python slice. (e.g. '2:', which means from index 2 to the last GPU index, or "
+                    "'3:8', which means from index 3 to index 7, or lastly ':4', which means indices 0 to 3 or a total of 4 gpus)."
+        )
     parser.add_argument(
         "--strat",
         type=str,
@@ -42,6 +43,14 @@ def add_launch_arguments(parser: ArgumentParser):
         default=".accmt",
         help="Specify queue file (default is '.accmt')."
     )
+    if _async:
+        parser.add_argument(
+            "--evaluation-device-indices",
+            "-e",
+            type=str,
+            required=True,
+            help="Number or GPU indices to use for evaluation (e.g. -n=0,1,4,5)."
+        )
     parser.add_argument("file", type=str, help="File to run training.")
     parser.add_argument("extra_args", nargs=REMAINDER)
 
@@ -51,19 +60,31 @@ def get_parser() -> tuple[ArgumentParser, Namespace]:
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
 
     # Run distributed training
-    launch_parser = subparsers.add_parser("launch", help="Launch distributed training processes.")
-    add_launch_arguments(launch_parser)
-    debug_parser = subparsers.add_parser("debug", help="Launch distributed training processes in debug mode.")
-    add_launch_arguments(debug_parser)
-    debug_parser.add_argument(
-        "--level",
-        "-L",
-        "-l",
-        type=int,
-        default=4,
-        required=False,
-        help="Debug mode level. See more details using 'accmt debug-levels'."
-    )
+    launch_parsers, debug_parsers = [], []
+
+    launch_parsers.append(subparsers.add_parser("launch", help="Launch distributed training processes."))
+    launch_parsers.append(subparsers.add_parser("alaunch", help="Launch distributed training processes with asynchronous evaluation."))
+    launch_parsers.append(subparsers.add_parser("async-launch", help="Launch distributed training processes with asynchronous evaluation."))
+    debug_parsers.append(subparsers.add_parser("debug", help="Launch distributed training processes in debug mode."))
+    debug_parsers.append(subparsers.add_parser("adebug", help="Launch distributed training processes with asynchronous evaluation in debug mode."))
+    debug_parsers.append(subparsers.add_parser("async-debug", help="Launch distributed training processes with asynchronous evaluation in debug mode."))
+
+    for launch_parser in launch_parsers:
+        _async = launch_parser.prog.split(" ")[-1] in {"alaunch", "async-launch"}
+        add_launch_arguments(launch_parser, _async=_async)
+
+    for debug_parser in debug_parsers:
+        _async = debug_parser.prog.split(" ")[-1] in {"adebug", "async-debug"}
+        add_launch_arguments(debug_parser, _async=_async)
+        debug_parser.add_argument(
+            "--level",
+            "-L",
+            "-l",
+            type=int,
+            default=4,
+            required=False,
+            help="Debug mode level. See more details using 'accmt debug-levels'."
+        )
 
     # Get model from checkpoint
     get_parser = subparsers.add_parser("get", help="Get model from a checkpoint directory.")

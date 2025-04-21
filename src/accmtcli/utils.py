@@ -39,37 +39,47 @@ def check_port_available(port: int, host="127.0.0.1"):
         result = sock.connect_ex((host, port))
         return result != 0
 
-def modify_config_file(path: str, num_gpus: int, port: int = 29500):
+def modify_config_file(path: str, num_gpus: int, port: int = 29500, copy: bool = False) -> tuple[int, str]:
     data = yaml.safe_load(open(path))
 
-    _port = port
-    port = port if check_port_available(port) else 0
-    if port == 0:
-        for current_port in range(_port+1, 65536):
-            if check_port_available(current_port):
-                port = current_port
-                break
-        
-        if port == 0: # if 29500 to 65535 is not available
-            for current_port in range(1, _port):
+    if port != -1:
+        _port = port
+        port = port if check_port_available(port) else 0
+        if port == 0:
+            for current_port in range(_port+1, 65536):
                 if check_port_available(current_port):
                     port = current_port
                     break
+            
+            if port == 0: # if 29500 to 65535 is not available
+                for current_port in range(1, _port):
+                    if check_port_available(current_port):
+                        port = current_port
+                        break
 
-        if port == 0:
-            raise RuntimeError("There are no ports available in your system.")
+            if port == 0:
+                raise RuntimeError("There are no ports available in your system.")
+    else:
+        port = 0  # accelerate will automatically check for an available port
     
     prev_main_process_port = data["main_process_port"] if "main_process_port" in data else -1
     prev_num_processes = data["num_processes"]
 
     if prev_main_process_port == port and prev_num_processes == num_gpus:
-        return # skip write process
+        return port, path  # skip write process
 
     data["main_process_port"] = port
     data["num_processes"] = num_gpus
 
+    if copy:
+        base_dir, filename = os.path.split(path)
+        filename = f"_{filename}"
+        path = os.path.join(base_dir, filename)
+
     with open(path, "w") as f:
         yaml.safe_dump(data, f)
+
+    return port, path
 
 def get_python_cmd():
     if shutil.which("python") is not None:
@@ -116,6 +126,12 @@ def remove_first_line_in_file(file: str):
         f.seek(0)
         f.writelines(lines[1:])
         f.truncate()
+
+def get_cmd_as_list(cmd: str) -> list[str]:
+    cmd = cmd.split(" ")
+    cmd = [c for c in cmd if c not in {"", " "}]
+
+    return cmd
 
 DEBUG_LEVEL_INFO = {
     1: "Disables logging (MLFlow, Tensorboard, etc).",
