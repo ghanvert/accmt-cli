@@ -89,18 +89,22 @@ def launch(args):
     
     port, _ = modify_config_file(accelerate_config_file, num_processes)
 
+    if args.command == "example":
+        print(f"accelerate launch --config_file={accelerate_config_file} {file} {extra_args}")
+        return
+
     cmd = f"accelerate launch --config_file={accelerate_config_file} {file} {extra_args}"
 
-    if not cpu:
-        os.environ["CUDA_VISIBLE_DEVICES"] = gpu_indices
-
+    omp_num_threads = os.cpu_count() // num_processes
     if not _async:
+        if not cpu:
+            os.environ["OMP_NUM_THREADS"] = str(omp_num_threads)
+
         os.system(cmd)
     else:
         train_group = os.environ.copy()
         train_group["ACCMT_TRAIN_GROUP"] = "1"
-        if args.O1:
-            train_group["OMP_NUM_THREADS"] = str(os.cpu_count() // num_processes)
+        train_group["OMP_NUM_THREADS"] = str(omp_num_threads)
         cmd = get_cmd_as_list(cmd)
         try:
             process1 = subprocess.Popen(cmd, env=train_group, start_new_session=True)
@@ -111,9 +115,10 @@ def launch(args):
                 gpu_indices = args.evaluation_device_indices.removeprefix(",").removesuffix(",")
                 if not cpu:
                     eval_group["CUDA_VISIBLE_DEVICES"] = gpu_indices
+                    omp_num_threads = os.cpu_count() // len(gpu_indices.split(","))
+                    eval_group["OMP_NUM_THREADS"] = str(omp_num_threads)
+
                 num_processes = len(gpu_indices.split(","))
-                if args.O1:
-                    eval_group["OMP_NUM_THREADS"] = str(os.cpu_count() // num_processes)
 
                 _,  _accelerate_config_file = modify_config_file(accelerate_config_file, num_processes, port=port+1, copy=True)
                 async_cmd = f"accelerate launch --config_file={_accelerate_config_file} {file} {extra_args}"
